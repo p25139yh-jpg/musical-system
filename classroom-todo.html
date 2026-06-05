@@ -201,21 +201,37 @@ let filterCourse = 'all', filterStatus = 'pending';
 let notifyEnabled = false, notifyDays = 0, notifyHours = 24, notifyMins = 0, notifyTimers = [];
 
 const THEMES = [
-  { name: 'ブルー',   accent: '#4f8ef7' },
-  { name: 'パープル', accent: '#7c5cfc' },
-  { name: 'グリーン', accent: '#10b981' },
-  { name: 'ピンク',   accent: '#ec4899' },
-  { name: 'オレンジ', accent: '#f59e0b' },
-  { name: 'レッド',   accent: '#ef4444' },
-  { name: 'ティール', accent: '#14b8a6' },
-  { name: 'インジゴ', accent: '#6366f1' },
+  { name: 'ブルー',   accent: '#4f8ef7', bg: '#f0f5ff', surface: '#ffffff', border: '#dae4fb' },
+  { name: 'パープル', accent: '#7c5cfc', bg: '#f5f3ff', surface: '#ffffff', border: '#e2dcfd' },
+  { name: 'グリーン', accent: '#10b981', bg: '#f0fdf7', surface: '#ffffff', border: '#d1f5e8' },
+  { name: 'ピンク',   accent: '#ec4899', bg: '#fff0f7', surface: '#ffffff', border: '#fcd6eb' },
+  { name: 'オレンジ', accent: '#f59e0b', bg: '#fffbf0', surface: '#ffffff', border: '#fde9b0' },
+  { name: 'レッド',   accent: '#ef4444', bg: '#fff5f5', surface: '#ffffff', border: '#fdd5d5' },
+  { name: 'ティール', accent: '#14b8a6', bg: '#f0fdfc', surface: '#ffffff', border: '#ccf2ef' },
+  { name: 'インジゴ', accent: '#6366f1', bg: '#f5f5ff', surface: '#ffffff', border: '#dcdcfc' },
 ];
 let currentTheme = parseInt(localStorage.getItem('themeIndex') || '0');
 
 function applyTheme(index) {
   currentTheme = index;
   localStorage.setItem('themeIndex', index);
-  document.documentElement.style.setProperty('--accent', THEMES[index].accent);
+  const t = THEMES[index];
+  let styleEl = document.getElementById('theme-style');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'theme-style';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = `:root {
+    --accent: ${t.accent};
+    --bg: ${t.bg};
+    --surface: ${t.surface};
+    --border: ${t.border};
+  }`;
+  document.body.style.background = t.bg;
+  document.querySelectorAll('.color-swatch').forEach((el, i) => {
+    el.classList.toggle('active', i === index);
+  });
 }
 
 function saveCustomTodos() {
@@ -512,7 +528,7 @@ function updateApp() {
 
   // テーマバー
   const swatches = THEMES.map((t, i) =>
-    `<div class="color-swatch ${i===currentTheme?'active':''}" style="background:${t.accent}" title="${t.name}" onclick="applyTheme(${i});updateApp()"></div>`
+    `<div class="color-swatch ${i===currentTheme?'active':''}" style="background:${t.accent}" title="${t.name}" onclick="applyTheme(${i})"></div>`
   ).join('');
   const themeBar = `<div class="theme-bar">
     <span class="theme-label">テーマカラー</span>
@@ -597,6 +613,7 @@ document.getElementById('app').innerHTML = `<div id="login-screen">
 </div>`;
 
 window.addEventListener('load', () => {
+  applyTheme(currentTheme); // ページ表示直後にテーマを適用
   const s = document.createElement('script');
   s.src = 'https://accounts.google.com/gsi/client';
   s.onload = initGoogle;
