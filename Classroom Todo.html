@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<!-- saved from url=(0065)file:///Users/yoshizawatomoenashi/Downloads/classroom-todo_4.html -->
+<html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classroom Todo</title>
+<link href="./Classroom Todo_files/css2" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f6fa;
+    --surface: #ffffff;
+    --border: #e4e6f0;
+    --accent: #4f8ef7;
+    --green: #34d399;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --text: #1e2140;
+    --text2: #6b7099;
+    --text3: #b0b4cc;
+    --font: 'Noto Sans JP', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+
+  header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 14px 24px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo { font-size: 16px; font-weight: 700; }
+  .logo span { color: var(--accent); }
+  .user-area { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text2); }
+  .btn {
+    padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    cursor: pointer; border: none; font-family: var(--font); transition: opacity .15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+  .btn:hover { opacity: .8; }
+
+  .container { max-width: 680px; margin: 32px auto; padding: 0 16px; }
+
+  .notify-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .notify-card label { font-size: 13px; color: var(--text2); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .notify-card select {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    border-radius: 6px; padding: 4px 8px; font-size: 12px; font-family: var(--font);
+  }
+  .notify-label { font-size: 12px; font-weight: 500; color: var(--accent); margin-right: 4px; }
+
+  .filter-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tab {
+    padding: 5px 14px; border-radius: 99px; font-size: 12px; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text2);
+    transition: all .15s;
+  }
+  .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .todo-list { display: flex; flex-direction: column; gap: 8px; }
+  .todo-item {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px;
+    transition: border-color .15s;
+  }
+  .todo-item:hover { border-color: var(--accent); }
+  .todo-item.submitted { opacity: .65; }
+
+  .todo-check {
+    width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border);
+    flex-shrink: 0; margin-top: 2px; cursor: pointer; transition: all .15s;
+    display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;
+  }
+  .todo-check.done-manual { background: var(--green); border-color: var(--green); color: #fff; }
+  .todo-check.done-manual::after { content: '✓'; }
+  .todo-check.done-submitted { background: var(--accent); border-color: var(--accent); color: #fff; cursor: default; }
+  .todo-check.done-submitted::after { content: '✓'; }
+
+  .todo-body { flex: 1; min-width: 0; }
+  .todo-title { font-size: 14px; font-weight: 500; margin-bottom: 3px; line-height: 1.4; }
+  .todo-title.done-text { text-decoration: line-through; color: var(--text3); }
+  .todo-course { font-size: 11px; color: var(--text3); margin-bottom: 6px; }
+  .badges { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .due-badge {
+    display: inline-block; font-size: 11px; font-family: var(--mono);
+    padding: 2px 8px; border-radius: 99px; font-weight: 500;
+  }
+  .submitted-badge {
+    display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px;
+    font-weight: 500; background: #eff6ff; color: #1d4ed8;
+  }
+  .due-red { background: #fff0f0; color: #d94f4f; }
+  .due-amber { background: #fffbeb; color: #b45309; }
+  .due-green { background: #f0fdf4; color: #15803d; }
+  .due-gray { background: var(--bg); color: var(--text3); }
+  .open-link { font-size: 11px; color: var(--accent); text-decoration: none; }
+  .open-link:hover { text-decoration: underline; }
+
+  .filter-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .filter-label { font-size: 12px; color: var(--text3); white-space: nowrap; }
+  .filter-select {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 6px 10px; font-size: 13px; font-family: var(--font);
+    cursor: pointer; flex: 1; min-width: 0;
+  }
+  .filter-select:focus { outline: none; border-color: var(--accent); }
+
+  .empty { text-align: center; padding: 56px 16px; color: var(--text3); font-size: 14px; line-height: 2; }
+  .spinner { width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 12px; }
+  .loading-text { color: var(--text3); font-size: 13px; text-align: center; margin-bottom: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #login-screen { max-width: 400px; margin: 80px auto; text-align: center; padding: 0 16px; }
+  .login-icon { font-size: 52px; margin-bottom: 16px; }
+  .login-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .login-sub { font-size: 14px; color: var(--text2); line-height: 1.8; margin-bottom: 24px; }
+
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: #fff; border-radius: 10px;
+    padding: 10px 20px; font-size: 13px; opacity: 0; transition: opacity .3s;
+    pointer-events: none; white-space: nowrap; z-index: 999;
+  }
+  #toast.show { opacity: 1; }
+</style>
+<script src="./Classroom Todo_files/client"></script><style id="googleidentityservice_button_styles">.qJTHM{-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;color:#202124;direction:ltr;-webkit-touch-callout:none;font-family:Roboto-Regular,arial,sans-serif;-webkit-font-smoothing:antialiased;font-weight:400;margin:0;overflow:hidden;-webkit-text-size-adjust:100%}.ynRLnc{left:-9999px;position:absolute;top:-9999px}.L6cTce{display:none}.bltWBb{overflow-wrap:break-word;word-break:break-word}.hSRGPd{color:#1a73e8;cursor:pointer;font-weight:500;text-decoration:none}.Bz112c-W3lGp{height:16px;width:16px}.Bz112c-E3DyYd{height:20px;width:20px}.Bz112c-r9oPif{height:24px;width:24px}.Bz112c-u2z5K{height:36px;width:36px}.Bz112c-uaxL4e{border-radius:10px}.LgbsSe-Bz112c{display:block}.S9gUrf-YoZ4jf{border:none;margin:0;padding:0}.S9gUrf-YoZ4jf *{border:none;margin:0;padding:0}.fFW7wc-ibnC6b>.aZ2wEe>div{border-color:#4285f4}.P1ekSe-ZMv3u{-webkit-transition:height .2s linear;transition:height .2s linear}.P1ekSe-ZMv3u>div:first-child{background-color:#1a73e8!important;-webkit-transition:width .3s linear;transition:width .3s linear}.P1ekSe-ZMv3u>div:nth-child(2){background-image:-webkit-gradient(linear,left top,right top,from(rgba(255,255,255,.7)),to(rgba(255,255,255,.7))),-webkit-gradient(linear,left top,right top,from(#1a73e8),to(#1a73e8))!important;background-image:-webkit-linear-gradient(left,rgba(255,255,255,.7),rgba(255,255,255,.7)),-webkit-linear-gradient(left,#1a73e8,#1a73e8)!important;background-image:linear-gradient(90deg,rgba(255,255,255,.7),rgba(255,255,255,.7)),linear-gradient(90deg,#1a73e8,#1a73e8)!important}.P1ekSe-ZMv3u>div:nth-child(3){background-image:-webkit-gradient(linear,left top,right top,from(rgba(255,255,255,.7)),to(rgba(255,255,255,.7))),-webkit-gradient(linear,left top,right top,from(#1a73e8),to(#1a73e8))!important;background-image:-webkit-linear-gradient(left,rgba(255,255,255,.7),rgba(255,255,255,.7)),-webkit-linear-gradient(left,#1a73e8,#1a73e8)!important;background-image:linear-gradient(90deg,rgba(255,255,255,.7),rgba(255,255,255,.7)),linear-gradient(90deg,#1a73e8,#1a73e8)!important}.haAclf{display:inline-block}.nsm7Bb-HzV7m-LgbsSe{border-radius:4px;box-sizing:border-box;-webkit-transition:background-color .218s,border-color .218s;transition:background-color .218s,border-color .218s;-moz-user-select:none;-webkit-user-select:none;-ms-user-select:none;-webkit-appearance:none;background-color:#fff;background-image:none;border:1px solid #dadce0;color:#3c4043;cursor:pointer;font-family:Google Sans,arial,sans-serif;font-size:14px;height:40px;letter-spacing:.25px;outline:none;overflow:hidden;padding:0 12px;position:relative;text-align:center;vertical-align:middle;white-space:nowrap;width:auto}@media screen and (-ms-high-contrast:active){.nsm7Bb-HzV7m-LgbsSe{border:2px solid windowText;color:windowText}}@media screen and (preferes-contrast:more){.nsm7Bb-HzV7m-LgbsSe{color:#000}}.nsm7Bb-HzV7m-LgbsSe.pSzOP-SxQuSe{font-size:14px;height:32px;letter-spacing:.25px;padding:0 10px}.nsm7Bb-HzV7m-LgbsSe.purZT-SxQuSe{font-size:11px;height:20px;letter-spacing:.3px;padding:0 8px}.nsm7Bb-HzV7m-LgbsSe.Bz112c-LgbsSe{padding:0;width:40px}.nsm7Bb-HzV7m-LgbsSe.Bz112c-LgbsSe.pSzOP-SxQuSe{width:32px}.nsm7Bb-HzV7m-LgbsSe.Bz112c-LgbsSe.purZT-SxQuSe{width:20px}.nsm7Bb-HzV7m-LgbsSe.JGcpL-RbRzK{border-radius:20px}.nsm7Bb-HzV7m-LgbsSe.JGcpL-RbRzK.pSzOP-SxQuSe{border-radius:16px}.nsm7Bb-HzV7m-LgbsSe.JGcpL-RbRzK.purZT-SxQuSe{border-radius:10px}.nsm7Bb-HzV7m-LgbsSe.i5vt6e-to915-Ia7Qfc{border:1px solid #8e918f;background-color:#131314;color:#e3e3e3}.nsm7Bb-HzV7m-LgbsSe.MFS4be-Ia7Qfc{border:none;color:#fff}.nsm7Bb-HzV7m-LgbsSe.MFS4be-v3pZbf-Ia7Qfc{background-color:#1a73e8}.nsm7Bb-HzV7m-LgbsSe.MFS4be-JaPV2b-Ia7Qfc{background-color:#202124;color:#e8eaed}@media screen and (prefers-contrast:more){.nsm7Bb-HzV7m-LgbsSe.MFS4be-JaPV2b-Ia7Qfc{color:#fff}}.nsm7Bb-HzV7m-LgbsSe .nsm7Bb-HzV7m-LgbsSe-Bz112c{height:18px;margin-right:8px;min-width:18px;width:18px}.nsm7Bb-HzV7m-LgbsSe.pSzOP-SxQuSe .nsm7Bb-HzV7m-LgbsSe-Bz112c{height:14px;min-width:14px;width:14px}.nsm7Bb-HzV7m-LgbsSe.purZT-SxQuSe .nsm7Bb-HzV7m-LgbsSe-Bz112c{height:10px;min-width:10px;width:10px}.nsm7Bb-HzV7m-LgbsSe.jVeSEe .nsm7Bb-HzV7m-LgbsSe-Bz112c{margin-left:8px;margin-right:-4px}.nsm7Bb-HzV7m-LgbsSe.Bz112c-LgbsSe .nsm7Bb-HzV7m-LgbsSe-Bz112c{margin:0;padding:10px}.nsm7Bb-HzV7m-LgbsSe.Bz112c-LgbsSe.pSzOP-SxQuSe .nsm7Bb-HzV7m-LgbsSe-Bz112c{padding:8px}.nsm7Bb-HzV7m-LgbsSe.Bz112c-LgbsSe.purZT-SxQuSe .nsm7Bb-HzV7m-LgbsSe-Bz112c{padding:4px}.nsm7Bb-HzV7m-LgbsSe .nsm7Bb-HzV7m-LgbsSe-Bz112c-haAclf{border-top-left-radius:3px;border-bottom-left-radius:3px;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center;-webkit-box-align:center;-webkit-align-items:center;align-items:center;background-color:#fff;height:36px;margin-left:-10px;margin-right:12px;min-width:36px;width:36px}.nsm7Bb-HzV7m-LgbsSe .nsm7Bb-HzV7m-LgbsSe-Bz112c-haAclf .nsm7Bb-HzV7m-LgbsSe-Bz112c,.nsm7Bb-HzV7m-LgbsSe.Bz112c-LgbsSe .nsm7Bb-HzV7m-LgbsSe-Bz112c-haAclf .nsm7Bb-HzV7m-LgbsSe-Bz112c{margin:0;padding:0}.nsm7Bb-HzV7m-LgbsSe.pSzOP-SxQuSe .nsm7Bb-HzV7m-LgbsSe-Bz112c-haAclf{height:28px;margin-left:-8px;margin-right:10px;min-width:28px;width:28px}.nsm7Bb-HzV7m-LgbsSe.purZT-SxQuSe .nsm7Bb-HzV7m-LgbsSe-Bz112c-haAclf{height:16px;margin-left:-6px;margin-right:8px;min-width:16px;width:16px}.nsm7Bb-HzV7m-LgbsSe.Bz112c-LgbsSe .nsm7Bb-HzV7m-LgbsSe-Bz112c-haAclf{border-radius:3px;margin-left:2px;margin-right:0;padding:0}.nsm7Bb-HzV7m-LgbsSe.JGcpL-RbRzK .nsm7Bb-HzV7m-LgbsSe-Bz112c-haAclf{border-radius:18px}.nsm7Bb-HzV7m-LgbsSe.pSzOP-SxQuSe.JGcpL-RbRzK .nsm7Bb-HzV7m-LgbsSe-Bz112c-haAclf{border-radius:14px}.nsm7Bb-HzV7m-LgbsSe.purZT-SxQuSe.JGcpL-RbRzK .nsm7Bb-HzV7m-LgbsSe-Bz112c-haAclf{border-radius:8px}.nsm7Bb-HzV7m-LgbsSe .nsm7Bb-HzV7m-LgbsSe-bN97Pc-sM5MNb{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-align-items:center;-webkit-box-align:center;align-items:center;-webkit-flex-direction:row;-webkit-box-orient:horizontal;-webkit-box-direction:normal;flex-direction:row;-webkit-box-pack:justify;-webkit-justify-content:space-between;justify-content:space-between;-webkit-flex-wrap:nowrap;flex-wrap:nowrap;height:100%;position:relative;width:100%}.nsm7Bb-HzV7m-LgbsSe .oXtfBe-l4eHX{-webkit-box-pack:center;-webkit-justify-content:center;justify-content:center}.nsm7Bb-HzV7m-LgbsSe .nsm7Bb-HzV7m-LgbsSe-BPrWId{-webkit-flex-grow:1;-webkit-box-flex:1;flex-grow:1;font-family:Google Sans,arial,sans-serif;font-weight:500;overflow:hidden;text-overflow:ellipsis;vertical-align:top}.nsm7Bb-HzV7m-LgbsSe.purZT-SxQuSe .nsm7Bb-HzV7m-LgbsSe-BPrWId{font-weight:300}.nsm7Bb-HzV7m-LgbsSe .oXtfBe-l4eHX .nsm7Bb-HzV7m-LgbsSe-BPrWId{-webkit-flex-grow:0;-webkit-box-flex:0;flex-grow:0}.nsm7Bb-HzV7m-LgbsSe .nsm7Bb-HzV7m-LgbsSe-MJoBVe{-webkit-transition:background-color .218s;transition:background-color .218s;bottom:0;left:0;position:absolute;right:0;top:0}.nsm7Bb-HzV7m-LgbsSe:focus,.nsm7Bb-HzV7m-LgbsSe:hover{box-shadow:none;border-color:rgb(210,227,252);outline:none}.nsm7Bb-HzV7m-LgbsSe:focus-within{outline:2px solid #00639b;border-color:transparent}.nsm7Bb-HzV7m-LgbsSe:hover .nsm7Bb-HzV7m-LgbsSe-MJoBVe{background:rgba(66,133,244,.08)}.nsm7Bb-HzV7m-LgbsSe:active .nsm7Bb-HzV7m-LgbsSe-MJoBVe,.nsm7Bb-HzV7m-LgbsSe:focus .nsm7Bb-HzV7m-LgbsSe-MJoBVe{background:rgba(66,133,244,.1)}.nsm7Bb-HzV7m-LgbsSe.i5vt6e-to915-Ia7Qfc:hover .nsm7Bb-HzV7m-LgbsSe-MJoBVe{background:rgba(255,255,255,.08)}.nsm7Bb-HzV7m-LgbsSe.i5vt6e-to915-Ia7Qfc:active .nsm7Bb-HzV7m-LgbsSe-MJoBVe,.nsm7Bb-HzV7m-LgbsSe.i5vt6e-to915-Ia7Qfc:focus .nsm7Bb-HzV7m-LgbsSe-MJoBVe{background:rgba(255,255,255,.12)}.nsm7Bb-HzV7m-LgbsSe.MFS4be-Ia7Qfc:hover .nsm7Bb-HzV7m-LgbsSe-MJoBVe{background:rgba(255,255,255,.24)}.nsm7Bb-HzV7m-LgbsSe.MFS4be-Ia7Qfc:active .nsm7Bb-HzV7m-LgbsSe-MJoBVe,.nsm7Bb-HzV7m-LgbsSe.MFS4be-Ia7Qfc:focus .nsm7Bb-HzV7m-LgbsSe-MJoBVe{background:rgba(255,255,255,.32)}.nsm7Bb-HzV7m-LgbsSe .n1UuX-DkfjY{border-radius:50%;display:-webkit-box;display:-webkit-flex;display:flex;height:20px;margin-left:-4px;margin-right:8px;min-width:20px;width:20px}.nsm7Bb-HzV7m-LgbsSe.jVeSEe .nsm7Bb-HzV7m-LgbsSe-BPrWId{font-family:Roboto;font-size:12px;text-align:left}.nsm7Bb-HzV7m-LgbsSe.jVeSEe .nsm7Bb-HzV7m-LgbsSe-BPrWId .K4efff .fmcmS,.nsm7Bb-HzV7m-LgbsSe.jVeSEe .nsm7Bb-HzV7m-LgbsSe-BPrWId .ssJRIf{overflow:hidden;text-overflow:ellipsis}.nsm7Bb-HzV7m-LgbsSe.jVeSEe .nsm7Bb-HzV7m-LgbsSe-BPrWId .K4efff{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-align-items:center;-webkit-box-align:center;align-items:center;color:#5f6368;fill:#5f6368;font-size:11px;font-weight:400}.nsm7Bb-HzV7m-LgbsSe.jVeSEe.MFS4be-Ia7Qfc .nsm7Bb-HzV7m-LgbsSe-BPrWId .K4efff{color:#e8eaed;fill:#e8eaed}@media screen and (prefers-contrast:more){.nsm7Bb-HzV7m-LgbsSe.jVeSEe .nsm7Bb-HzV7m-LgbsSe-BPrWId .K4efff,.nsm7Bb-HzV7m-LgbsSe.jVeSEe.MFS4be-Ia7Qfc .nsm7Bb-HzV7m-LgbsSe-BPrWId .K4efff{color:#000;fill:#000}}.nsm7Bb-HzV7m-LgbsSe.jVeSEe .nsm7Bb-HzV7m-LgbsSe-BPrWId .K4efff .Bz112c{height:18px;margin:-3px -3px -3px 2px;min-width:18px;width:18px}.nsm7Bb-HzV7m-LgbsSe.jVeSEe .nsm7Bb-HzV7m-LgbsSe-Bz112c-haAclf{border-top-left-radius:0;border-bottom-left-radius:0;border-top-right-radius:3px;border-bottom-right-radius:3px;margin-left:12px;margin-right:-10px}.nsm7Bb-HzV7m-LgbsSe.jVeSEe.JGcpL-RbRzK .nsm7Bb-HzV7m-LgbsSe-Bz112c-haAclf{border-radius:18px}.L5Fo6c-sM5MNb{border:0;display:block;left:0;position:relative;top:0}.L5Fo6c-bF1uUb{border-radius:4px;bottom:0;cursor:pointer;left:0;position:absolute;right:0;top:0}.L5Fo6c-bF1uUb:focus{border:none;outline:none}sentinel{}</style></head>
+<body>
+
+<header>
+  <div class="logo">Classroom <span>Todo</span></div>
+  <div id="header-right">
+    <button class="btn btn-primary" onclick="handleLogin()">Googleでログイン</button>
+  </div>
+</header>
+
+<div id="app"><div id="login-screen">
+  <div class="login-icon">📚</div>
+  <div class="login-title">Classroom Todo</div>
+  <div class="login-sub">Google Classroomの課題をまとめて管理。<br>期限前にブラウザ通知でお知らせします。</div>
+  <button class="btn btn-primary" style="font-size:15px;padding:12px 32px;" onclick="handleLogin()">Googleアカウントでログイン</button>
+</div></div>
+<div id="toast"></div>
+
+<script>
+const CLIENT_ID = '863073003665-i58l6iinif55cr7ji4kjl1cgf3gh4opr.apps.googleusercontent.com';
+const SCOPES = [
+  'https://www.googleapis.com/auth/classroom.courses.readonly',
+  'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+  'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly'
+].join(' ');
+
+let tokenClient, accessToken = null;
+let courses = [], allTodos = [], manualDoneIds = loadDoneIds();
+let filterCourse = 'all', filterStatus = 'pending';
+let notifyEnabled = false, notifyHours = 24, notifyTimers = [];
+
+function saveDoneIds() {
+  localStorage.setItem('manualDoneIds', JSON.stringify([...manualDoneIds]));
+}
+function loadDoneIds() {
+  try {
+    const saved = localStorage.getItem('manualDoneIds');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  } catch { return new Set(); }
+}
+
+const COLORS = ['#4f8ef7','#7c5cfc','#34d399','#f59e0b','#f87171','#60a5fa','#a78bfa','#f472b6'];
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function handleLogin() {
+  if (!window.google) { showToast('少し待ってから試してください'); return; }
+  tokenClient.requestAccessToken();
+}
+
+function initGoogle() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID, scope: SCOPES,
+    callback: async (resp) => {
+      if (resp.error) { showToast('ログインに失敗しました'); return; }
+      accessToken = resp.access_token;
+      renderLoading('授業を読み込み中...');
+      await loadCourses();
+      renderLoading(`課題と提出状況を読み込み中... (0/${courses.length})`);
+      await loadAllTodos();
+      renderApp();
+    }
+  });
+}
+
+async function gFetch(url) {
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  return r.json();
+}
+
+async function loadCourses() {
+  const d = await gFetch('https://classroom.googleapis.com/v1/courses?courseStates=ACTIVE');
+  courses = d.courses || [];
+}
+
+async function loadAllTodos() {
+  allTodos = [];
+  for (let i = 0; i < courses.length; i++) {
+    const c = courses[i];
+    renderLoading(`課題と提出状況を読み込み中... (${i+1}/${courses.length})`);
+
+    // 課題一覧を取得
+    const wd = await gFetch(`https://classroom.googleapis.com/v1/courses/${c.id}/courseWork`);
+    const works = wd.courseWork || [];
+
+    // 提出状況を一括取得
+    const sd = await gFetch(`https://classroom.googleapis.com/v1/courses/${c.id}/courseWork/-/studentSubmissions?states=TURNED_IN&states=RETURNED`);
+    const submittedIds = new Set((sd.studentSubmissions || []).map(s => s.courseWorkId));
+
+    for (const w of works) {
+      if (!w.dueDate) continue;
+      const { year, month, day } = w.dueDate;
+      // Classroom APIの時刻はUTCなのでUTCとして解釈し日本時間に変換
+      const hours = w.dueTime?.hours ?? 23;
+      const minutes = w.dueTime?.minutes ?? 59;
+      const due = new Date(Date.UTC(year, month - 1, day, hours, minutes));
+      allTodos.push({
+        id: w.id,
+        title: w.title,
+        courseId: c.id,
+        courseName: c.name,
+        due,
+        link: w.alternateLink,
+        submitted: submittedIds.has(w.id)
+      });
+    }
+  }
+  allTodos.sort((a, b) => a.due - b.due);
+}
+
+function isDone(t) {
+  return t.submitted || manualDoneIds.has(t.id);
+}
+
+function getDueInfo(due) {
+  const diff = due - new Date();
+  if (diff < 0) return { label: '期限切れ', cls: 'due-red' };
+  const h = Math.floor(diff / 3600000);
+  if (h < 24) return { label: `あと${h}時間`, cls: 'due-red' };
+  if (h < 48) return { label: `あと${Math.floor(h/24)}日`, cls: 'due-amber' };
+  return { label: `あと${Math.floor(h/24)}日`, cls: 'due-green' };
+}
+
+function fmtDate(due) {
+  return `${due.getMonth()+1}/${due.getDate()} ${String(due.getHours()).padStart(2,'0')}:${String(due.getMinutes()).padStart(2,'0')}`;
+}
+
+function renderLoading(msg) {
+  document.getElementById('app').innerHTML = `<div class="container"><div class="empty"><div class="spinner"></div><div class="loading-text">${msg}</div></div></div>`;
+}
+
+function renderApp() {
+  document.getElementById('header-right').innerHTML = `
+    <div class="user-area">
+      <span>ログイン中</span>
+      <button class="btn btn-ghost" onclick="reload()">更新</button>
+      <button class="btn btn-ghost" onclick="logout()">ログアウト</button>
+    </div>`;
+  updateApp();
+}
+
+function updateApp() {
+  const visible = allTodos.filter(t => {
+    if (filterCourse !== 'all' && t.courseId !== filterCourse) return false;
+    const done = isDone(t);
+    if (filterStatus === 'pending') return !done;
+    if (filterStatus === 'done') return done;
+    return true;
+  });
+
+  // 授業ドロップダウン
+  let courseOptions = `<option value="all">すべての授業</option>`;
+  courses.forEach(c => {
+    courseOptions += `<option value="${c.id}" ${filterCourse===c.id?'selected':''}>${c.name}</option>`;
+  });
+  const courseTabs = `<div class="filter-row">
+    <span class="filter-label">授業</span>
+    <select class="filter-select" onchange="setFilterCourse(this.value)">${courseOptions}</select>
+  </div>`;
+
+  // ステータスタブ
+  const pendingCount = allTodos.filter(t => filterCourse==='all' || t.courseId===filterCourse).filter(t => !isDone(t)).length;
+  const doneCount = allTodos.filter(t => filterCourse==='all' || t.courseId===filterCourse).filter(t => isDone(t)).length;
+  const statusTabs = `<div class="filter-tabs">
+    <div class="tab ${filterStatus==='pending'?'active':''}" onclick="setFilterStatus('pending')">未完了 (${pendingCount})</div>
+    <div class="tab ${filterStatus==='done'?'active':''}" onclick="setFilterStatus('done')">完了済み (${doneCount})</div>
+    <div class="tab ${filterStatus==='all'?'active':''}" onclick="setFilterStatus('all')">すべて</div>
+  </div>`;
+
+  // 通知バー
+  const notifyBar = `<div class="notify-card">
+    <span class="notify-label">通知</span>
+    <label>
+      <input type="checkbox" ${notifyEnabled?'checked':''} onchange="toggleNotify(this.checked)">
+      期限前に通知する
+    </label>
+    <select onchange="setNotifyHours(this.value)">
+      <option value="6" ${notifyHours==6?'selected':''}>6時間前</option>
+      <option value="12" ${notifyHours==12?'selected':''}>12時間前</option>
+      <option value="24" ${notifyHours==24?'selected':''}>24時間前</option>
+      <option value="48" ${notifyHours==48?'selected':''}>2日前</option>
+    </select>
+  </div>`;
+
+  // Todoリスト
+  let listHtml = '';
+  if (visible.length === 0) {
+    listHtml = `<div class="empty">課題はありません</div>`;
+  } else {
+    listHtml = `<div class="todo-list">`;
+    for (const t of visible) {
+      const done = isDone(t);
+      const isSubmitted = t.submitted;
+      const isManual = manualDoneIds.has(t.id);
+      const ci = courses.findIndex(c => c.id === t.courseId);
+      const color = COLORS[ci % COLORS.length];
+      const dueInfo = getDueInfo(t.due);
+
+      let checkClass = '';
+      if (isSubmitted) checkClass = 'done-submitted';
+      else if (isManual) checkClass = 'done-manual';
+
+      const clickHandler = isSubmitted ? '' : `onclick="toggleDone('${t.id}')"`;
+
+      listHtml += `
+        <div class="todo-item ${done?'submitted':''}">
+          <div class="todo-check ${checkClass}" ${clickHandler} title="${isSubmitted?'Classroomで提出済み':isManual?'完了済み（クリックで戻す）':'クリックして完了'}"></div>
+          <div class="todo-body">
+            <div class="todo-title ${done?'done-text':''}">${t.title}</div>
+            <div class="todo-course" style="color:${color}">${t.courseName}</div>
+            <div class="badges">
+              ${done ? `<span class="due-badge due-gray">${fmtDate(t.due)}</span>` : `<span class="due-badge ${dueInfo.cls}">${dueInfo.label}</span><span class="due-badge due-gray">${fmtDate(t.due)}</span>`}
+              ${isSubmitted ? `<span class="submitted-badge">提出済み</span>` : ''}
+              <a class="open-link" href="${t.link}" target="_blank">Classroomで開く →</a>
+            </div>
+          </div>
+        </div>`;
+    }
+    listHtml += `</div>`;
+  }
+
+  document.getElementById('app').innerHTML = `<div class="container">
+    ${notifyBar}${courseTabs}${statusTabs}
+    <div class="todo-list-wrap">${listHtml}</div>
+  </div>`;
+}
+
+function toggleDone(id) {
+  manualDoneIds.has(id) ? manualDoneIds.delete(id) : manualDoneIds.add(id);
+  saveDoneIds();
+  updateApp();
+}
+function setFilterCourse(v) { filterCourse = v; updateApp(); }
+function setFilterStatus(v) { filterStatus = v; updateApp(); }
+
+async function reload() {
+  renderLoading('更新中...');
+  await loadCourses();
+  await loadAllTodos();
+  renderApp();
+  showToast('更新しました');
+}
+
+function logout() {
+  accessToken = null; courses = []; allTodos = []; manualDoneIds = new Set(); localStorage.removeItem('manualDoneIds');
+  document.getElementById('header-right').innerHTML = `<button class="btn btn-primary" onclick="handleLogin()">Googleでログイン</button>`;
+  document.getElementById('app').innerHTML = `<div id="login-screen">
+    <div class="login-icon">📚</div>
+    <div class="login-title">Classroom Todo</div>
+    <div class="login-sub">Google Classroomの課題をまとめて管理。<br>期限前にブラウザ通知でお知らせします。</div>
+    <button class="btn btn-primary" style="font-size:15px;padding:12px 32px;" onclick="handleLogin()">Googleアカウントでログイン</button>
+  </div>`;
+}
+
+async function toggleNotify(enabled) {
+  if (!enabled) { notifyEnabled = false; clearTimers(); updateApp(); return; }
+  if (!('Notification' in window)) { showToast('このブラウザは通知非対応です'); return; }
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') { showToast('通知が許可されませんでした'); notifyEnabled = false; updateApp(); return; }
+  notifyEnabled = true;
+  setupNotifications();
+  showToast(`通知をONにしました（${notifyHours}時間前）`);
+  updateApp();
+}
+function setNotifyHours(v) { notifyHours = parseInt(v); if (notifyEnabled) setupNotifications(); }
+function clearTimers() { notifyTimers.forEach(clearTimeout); notifyTimers = []; }
+function setupNotifications() {
+  clearTimers();
+  const now = Date.now();
+  for (const t of allTodos) {
+    if (isDone(t)) continue;
+    const fireAt = t.due.getTime() - notifyHours * 3600000;
+    const delay = fireAt - now;
+    if (delay > 0 && delay < 7 * 24 * 3600000) {
+      notifyTimers.push(setTimeout(() => {
+        new Notification('課題の期限が近づいています', {
+          body: `「${t.title}」まであと${notifyHours}時間`,
+          icon: 'https://ssl.gstatic.com/classroom/favicon.png'
+        });
+      }, delay));
+    }
+  }
+}
+
+document.getElementById('app').innerHTML = `<div id="login-screen">
+  <div class="login-icon">📚</div>
+  <div class="login-title">Classroom Todo</div>
+  <div class="login-sub">Google Classroomの課題をまとめて管理。<br>期限前にブラウザ通知でお知らせします。</div>
+  <button class="btn btn-primary" style="font-size:15px;padding:12px 32px;" onclick="handleLogin()">Googleアカウントでログイン</button>
+</div>`;
+
+window.addEventListener('load', () => {
+  const s = document.createElement('script');
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.onload = initGoogle;
+  document.head.appendChild(s);
+});
+</script>
+
+
+</body></html>
