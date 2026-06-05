@@ -98,6 +98,15 @@
   .open-link { font-size: 11px; color: var(--accent); text-decoration: none; }
   .open-link:hover { text-decoration: underline; }
 
+  .filter-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .filter-label { font-size: 12px; color: var(--text3); white-space: nowrap; }
+  .filter-select {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 6px 10px; font-size: 13px; font-family: var(--font);
+    cursor: pointer; flex: 1; min-width: 0;
+  }
+  .filter-select:focus { outline: none; border-color: var(--accent); }
+
   .empty { text-align: center; padding: 56px 16px; color: var(--text3); font-size: 14px; line-height: 2; }
   .spinner { width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 12px; }
   .loading-text { color: var(--text3); font-size: 13px; text-align: center; margin-bottom: 6px; }
@@ -138,9 +147,19 @@ const SCOPES = [
 ].join(' ');
 
 let tokenClient, accessToken = null;
-let courses = [], allTodos = [], manualDoneIds = new Set();
+let courses = [], allTodos = [], manualDoneIds = loadDoneIds();
 let filterCourse = 'all', filterStatus = 'pending';
 let notifyEnabled = false, notifyHours = 24, notifyTimers = [];
+
+function saveDoneIds() {
+  localStorage.setItem('manualDoneIds', JSON.stringify([...manualDoneIds]));
+}
+function loadDoneIds() {
+  try {
+    const saved = localStorage.getItem('manualDoneIds');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  } catch { return new Set(); }
+}
 
 const COLORS = ['#4f8ef7','#7c5cfc','#34d399','#f59e0b','#f87171','#60a5fa','#a78bfa','#f472b6'];
 
@@ -197,7 +216,10 @@ async function loadAllTodos() {
     for (const w of works) {
       if (!w.dueDate) continue;
       const { year, month, day } = w.dueDate;
-      const due = new Date(year, month - 1, day, w.dueTime?.hours ?? 23, w.dueTime?.minutes ?? 59);
+      // Classroom APIの時刻はUTCなのでUTCとして解釈し日本時間に変換
+      const hours = w.dueTime?.hours ?? 23;
+      const minutes = w.dueTime?.minutes ?? 59;
+      const due = new Date(Date.UTC(year, month - 1, day, hours, minutes));
       allTodos.push({
         id: w.id,
         title: w.title,
@@ -252,13 +274,15 @@ function updateApp() {
     return true;
   });
 
-  // 授業タブ
-  let courseTabs = `<div class="filter-tabs">
-    <div class="tab ${filterCourse==='all'?'active':''}" onclick="setFilterCourse('all')">すべて</div>`;
+  // 授業ドロップダウン
+  let courseOptions = `<option value="all">すべての授業</option>`;
   courses.forEach(c => {
-    courseTabs += `<div class="tab ${filterCourse===c.id?'active':''}" onclick="setFilterCourse('${c.id}')">${c.name}</div>`;
+    courseOptions += `<option value="${c.id}" ${filterCourse===c.id?'selected':''}>${c.name}</option>`;
   });
-  courseTabs += `</div>`;
+  const courseTabs = `<div class="filter-row">
+    <span class="filter-label">授業</span>
+    <select class="filter-select" onchange="setFilterCourse(this.value)">${courseOptions}</select>
+  </div>`;
 
   // ステータスタブ
   const pendingCount = allTodos.filter(t => filterCourse==='all' || t.courseId===filterCourse).filter(t => !isDone(t)).length;
@@ -329,6 +353,7 @@ function updateApp() {
 
 function toggleDone(id) {
   manualDoneIds.has(id) ? manualDoneIds.delete(id) : manualDoneIds.add(id);
+  saveDoneIds();
   updateApp();
 }
 function setFilterCourse(v) { filterCourse = v; updateApp(); }
@@ -343,7 +368,7 @@ async function reload() {
 }
 
 function logout() {
-  accessToken = null; courses = []; allTodos = []; manualDoneIds = new Set();
+  accessToken = null; courses = []; allTodos = []; manualDoneIds = new Set(); localStorage.removeItem('manualDoneIds');
   document.getElementById('header-right').innerHTML = `<button class="btn btn-primary" onclick="handleLogin()">Googleでログイン</button>`;
   document.getElementById('app').innerHTML = `<div id="login-screen">
     <div class="login-icon">📚</div>
