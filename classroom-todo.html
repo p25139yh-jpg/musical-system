@@ -117,6 +117,19 @@
   .login-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
   .login-sub { font-size: 14px; color: var(--text2); line-height: 1.8; margin-bottom: 24px; }
 
+  /* テーマカラー */
+  .theme-bar {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .theme-label { font-size: 12px; font-weight: 500; color: var(--text3); white-space: nowrap; }
+  .color-swatch {
+    width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent; transition: transform .15s, border-color .15s; flex-shrink: 0;
+  }
+  .color-swatch:hover { transform: scale(1.15); }
+  .color-swatch.active { border-color: var(--text); transform: scale(1.15); }
+
   /* 追加ボタン */
   .add-btn {
     position: fixed; bottom: 24px; right: 24px;
@@ -185,7 +198,25 @@ const SCOPES = [
 let tokenClient, accessToken = null;
 let courses = [], allTodos = [], manualDoneIds = loadDoneIds(), customTodos = loadCustomTodos();
 let filterCourse = 'all', filterStatus = 'pending';
-let notifyEnabled = false, notifyHours = 24, notifyTimers = [];
+let notifyEnabled = false, notifyDays = 0, notifyHours = 24, notifyMins = 0, notifyTimers = [];
+
+const THEMES = [
+  { name: 'ブルー',   accent: '#4f8ef7' },
+  { name: 'パープル', accent: '#7c5cfc' },
+  { name: 'グリーン', accent: '#10b981' },
+  { name: 'ピンク',   accent: '#ec4899' },
+  { name: 'オレンジ', accent: '#f59e0b' },
+  { name: 'レッド',   accent: '#ef4444' },
+  { name: 'ティール', accent: '#14b8a6' },
+  { name: 'インジゴ', accent: '#6366f1' },
+];
+let currentTheme = parseInt(localStorage.getItem('themeIndex') || '0');
+
+function applyTheme(index) {
+  currentTheme = index;
+  localStorage.setItem('themeIndex', index);
+  document.documentElement.style.setProperty('--accent', THEMES[index].accent);
+}
 
 function saveCustomTodos() {
   localStorage.setItem('customTodos', JSON.stringify(customTodos));
@@ -222,6 +253,7 @@ function handleLogin() {
 }
 
 function initGoogle() {
+  applyTheme(currentTheme);
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID, scope: SCOPES,
     callback: async (resp) => {
@@ -415,18 +447,27 @@ function updateApp() {
   </div>`;
 
   // 通知バー
+  // 日の選択肢（0〜7日）
+  let dayOpts = '';
+  for (let d = 0; d <= 7; d++) dayOpts += `<option value="${d}" ${notifyDays===d?'selected':''}>${d}日</option>`;
+  // 時間の選択肢（0〜23時間）
+  let hourOpts = '';
+  for (let h = 0; h <= 23; h++) hourOpts += `<option value="${h}" ${notifyHours===h?'selected':''}>${h}時間</option>`;
+  // 分の選択肢（0〜55分、5分おき）
+  let minOpts = '';
+  for (let m = 0; m <= 55; m += 5) minOpts += `<option value="${m}" ${notifyMins===m?'selected':''}>${m}分</option>`;
+
+  const totalMins = notifyDays * 24 * 60 + notifyHours * 60 + notifyMins;
   const notifyBar = `<div class="notify-card">
     <span class="notify-label">通知</span>
     <label>
       <input type="checkbox" ${notifyEnabled?'checked':''} onchange="toggleNotify(this.checked)">
-      期限前に通知する
+      期限
     </label>
-    <select onchange="setNotifyHours(this.value)">
-      <option value="6" ${notifyHours==6?'selected':''}>6時間前</option>
-      <option value="12" ${notifyHours==12?'selected':''}>12時間前</option>
-      <option value="24" ${notifyHours==24?'selected':''}>24時間前</option>
-      <option value="48" ${notifyHours==48?'selected':''}>2日前</option>
-    </select>
+    <select onchange="setNotifyDays(this.value)">${dayOpts}</select>
+    <select onchange="setNotifyHours(this.value)">${hourOpts}</select>
+    <select onchange="setNotifyMins(this.value)">${minOpts}</select>
+    <span style="font-size:12px;color:var(--text2);">前に通知</span>
   </div>`;
 
   // Todoリスト
@@ -469,8 +510,17 @@ function updateApp() {
     listHtml += `</div>`;
   }
 
+  // テーマバー
+  const swatches = THEMES.map((t, i) =>
+    `<div class="color-swatch ${i===currentTheme?'active':''}" style="background:${t.accent}" title="${t.name}" onclick="applyTheme(${i});updateApp()"></div>`
+  ).join('');
+  const themeBar = `<div class="theme-bar">
+    <span class="theme-label">テーマカラー</span>
+    ${swatches}
+  </div>`;
+
   document.getElementById('app').innerHTML = `<div class="container">
-    ${notifyBar}${courseTabs}${statusTabs}
+    ${themeBar}${notifyBar}${courseTabs}${statusTabs}
     <div class="todo-list-wrap">${listHtml}</div>
   </div>`;
 }
@@ -511,22 +561,27 @@ async function toggleNotify(enabled) {
   if (perm !== 'granted') { showToast('通知が許可されませんでした'); notifyEnabled = false; updateApp(); return; }
   notifyEnabled = true;
   setupNotifications();
-  showToast(`通知をONにしました（${notifyHours}時間前）`);
+  const lbl = [notifyDays?`${notifyDays}日`:'', notifyHours?`${notifyHours}時間`:'', notifyMins?`${notifyMins}分`:''].filter(Boolean).join('') || '0分'; showToast(`通知をONにしました（${lbl}前）`);
   updateApp();
 }
-function setNotifyHours(v) { notifyHours = parseInt(v); if (notifyEnabled) setupNotifications(); }
+function setNotifyDays(v) { notifyDays = parseInt(v); if (notifyEnabled) setupNotifications(); updateApp(); }
+function setNotifyHours(v) { notifyHours = parseInt(v); if (notifyEnabled) setupNotifications(); updateApp(); }
+function setNotifyMins(v) { notifyMins = parseInt(v); if (notifyEnabled) setupNotifications(); updateApp(); }
 function clearTimers() { notifyTimers.forEach(clearTimeout); notifyTimers = []; }
 function setupNotifications() {
   clearTimers();
   const now = Date.now();
+  const totalMs = (notifyDays * 24 * 60 + notifyHours * 60 + notifyMins) * 60000;
+  if (totalMs === 0) return;
+  const label = [notifyDays?`${notifyDays}日`:'', notifyHours?`${notifyHours}時間`:'', notifyMins?`${notifyMins}分`:''].filter(Boolean).join('') || '0分';
   for (const t of allTodos) {
     if (isDone(t)) continue;
-    const fireAt = t.due.getTime() - notifyHours * 3600000;
+    const fireAt = t.due.getTime() - totalMs;
     const delay = fireAt - now;
-    if (delay > 0 && delay < 7 * 24 * 3600000) {
+    if (delay > 0 && delay < 14 * 24 * 3600000) {
       notifyTimers.push(setTimeout(() => {
         new Notification('課題の期限が近づいています', {
-          body: `「${t.title}」まであと${notifyHours}時間`,
+          body: `「${t.title}」まであと${label}`,
           icon: 'https://ssl.gstatic.com/classroom/favicon.png'
         });
       }, delay));
