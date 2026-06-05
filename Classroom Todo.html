@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0065)file:///Users/yoshizawatomoenashi/Downloads/classroom-todo_5.html -->
+<!-- saved from url=(0065)file:///Users/yoshizawatomoenashi/Downloads/classroom-todo_6.html -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -500,7 +500,6 @@ async function reload() {
 function logout() {
   accessToken = null; courses = []; allTodos = []; manualDoneIds = new Set(); localStorage.removeItem('manualDoneIds');
   document.getElementById('add-btn').style.display = 'none';
-  document.getElementById('add-btn').style.display = 'flex';
   document.getElementById('header-right').innerHTML = `<button class="btn btn-primary" onclick="handleLogin()">Googleでログイン</button>`;
   document.getElementById('app').innerHTML = `<div id="login-screen">
     <div class="login-icon">📚</div>
