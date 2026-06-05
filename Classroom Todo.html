@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0065)file:///Users/yoshizawatomoenashi/Downloads/classroom-todo_4.html -->
+<!-- saved from url=(0065)file:///Users/yoshizawatomoenashi/Downloads/classroom-todo_5.html -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -117,6 +117,41 @@
   .login-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
   .login-sub { font-size: 14px; color: var(--text2); line-height: 1.8; margin-bottom: 24px; }
 
+  /* 追加ボタン */
+  .add-btn {
+    position: fixed; bottom: 24px; right: 24px;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--accent); color: #fff; border: none;
+    font-size: 24px; cursor: pointer; box-shadow: 0 4px 16px rgba(79,142,247,.4);
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity .15s; z-index: 100;
+  }
+  .add-btn:hover { opacity: .85; }
+
+  /* モーダル */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.4);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; padding: 16px;
+  }
+  .modal {
+    background: var(--surface); border-radius: 16px; padding: 24px;
+    width: 100%; max-width: 440px; box-shadow: 0 8px 32px rgba(0,0,0,.15);
+  }
+  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+  .modal input, .modal textarea, .modal select {
+    width: 100%; border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 13px; font-family: var(--font);
+    color: var(--text); background: var(--bg); margin-bottom: 10px;
+  }
+  .modal input:focus, .modal textarea:focus, .modal select:focus {
+    outline: none; border-color: var(--accent);
+  }
+  .modal textarea { resize: vertical; min-height: 72px; }
+  .modal-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; display: block; }
+  .modal-btns { display: flex; gap: 8px; margin-top: 6px; justify-content: flex-end; }
+  .custom-badge { background: #f0f4ff; color: #4f8ef7; font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 500; }
+
   #toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
     background: var(--text); color: #fff; border-radius: 10px;
@@ -141,6 +176,7 @@
   <div class="login-sub">Google Classroomの課題をまとめて管理。<br>期限前にブラウザ通知でお知らせします。</div>
   <button class="btn btn-primary" style="font-size:15px;padding:12px 32px;" onclick="handleLogin()">Googleアカウントでログイン</button>
 </div></div>
+<button class="add-btn" id="add-btn" onclick="showAddModal()" style="display:none;">+</button>
 <div id="toast"></div>
 
 <script>
@@ -152,9 +188,20 @@ const SCOPES = [
 ].join(' ');
 
 let tokenClient, accessToken = null;
-let courses = [], allTodos = [], manualDoneIds = loadDoneIds();
+let courses = [], allTodos = [], manualDoneIds = loadDoneIds(), customTodos = loadCustomTodos();
 let filterCourse = 'all', filterStatus = 'pending';
 let notifyEnabled = false, notifyHours = 24, notifyTimers = [];
+
+function saveCustomTodos() {
+  localStorage.setItem('customTodos', JSON.stringify(customTodos));
+}
+function loadCustomTodos() {
+  try {
+    const saved = localStorage.getItem('customTodos');
+    if (!saved) return [];
+    return JSON.parse(saved).map(t => ({ ...t, due: new Date(t.due) }));
+  } catch { return []; }
+}
 
 function saveDoneIds() {
   localStorage.setItem('manualDoneIds', JSON.stringify([...manualDoneIds]));
@@ -236,6 +283,10 @@ async function loadAllTodos() {
       });
     }
   }
+  // カスタムTodoをマージ
+  for (const t of customTodos) {
+    allTodos.push(t);
+  }
   allTodos.sort((a, b) => a.due - b.due);
 }
 
@@ -261,6 +312,7 @@ function renderLoading(msg) {
 }
 
 function renderApp() {
+  document.getElementById('add-btn').style.display = 'flex';
   document.getElementById('header-right').innerHTML = `
     <div class="user-area">
       <span>ログイン中</span>
@@ -270,11 +322,77 @@ function renderApp() {
   updateApp();
 }
 
+function showAddModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'add-modal';
+  overlay.innerHTML = `
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">Todoを追加</div>
+      <label class="modal-label">タイトル *</label>
+      <input id="new-title" type="text" placeholder="例：レポートを書く">
+      <label class="modal-label">メモ（任意）</label>
+      <textarea id="new-memo" placeholder="詳細や備考など"></textarea>
+      <label class="modal-label">期限 *</label>
+      <input id="new-due" type="datetime-local">
+      <div class="modal-btns">
+        <button class="btn btn-ghost" onclick="closeModal()">キャンセル</button>
+        <button class="btn btn-primary" onclick="addCustomTodo()">追加</button>
+      </div>
+    </div>`;
+  overlay.addEventListener('click', closeModal);
+  document.body.appendChild(overlay);
+  document.getElementById('new-title').focus();
+}
+
+function closeModal() {
+  const m = document.getElementById('add-modal');
+  if (m) m.remove();
+}
+
+function addCustomTodo() {
+  const title = document.getElementById('new-title').value.trim();
+  const memo = document.getElementById('new-memo').value.trim();
+  const dueVal = document.getElementById('new-due').value;
+  if (!title) { alert('タイトルを入力してください'); return; }
+  if (!dueVal) { alert('期限を入力してください'); return; }
+  const due = new Date(dueVal);
+  const todo = {
+    id: 'custom_' + Date.now(),
+    title,
+    memo,
+    courseId: 'custom',
+    courseName: '自分のTodo',
+    due,
+    link: null,
+    submitted: false,
+    isCustom: true
+  };
+  customTodos.push(todo);
+  saveCustomTodos();
+  allTodos.push(todo);
+  allTodos.sort((a, b) => a.due - b.due);
+  closeModal();
+  updateApp();
+  showToast('Todoを追加しました');
+}
+
+function deleteCustomTodo(id) {
+  customTodos = customTodos.filter(t => t.id !== id);
+  saveCustomTodos();
+  allTodos = allTodos.filter(t => t.id !== id);
+  manualDoneIds.delete(id);
+  saveDoneIds();
+  updateApp();
+  showToast('削除しました');
+}
+
 function updateApp() {
   const visible = allTodos.filter(t => {
     if (filterCourse !== 'all' && t.courseId !== filterCourse) return false;
     const done = isDone(t);
-    if (filterStatus === 'pending') return !done;
+    if (filterStatus === 'pending') return !done && t.due > new Date();
+    if (filterStatus === 'overdue') return !done && t.due <= new Date();
     if (filterStatus === 'done') return done;
     return true;
   });
@@ -290,10 +408,13 @@ function updateApp() {
   </div>`;
 
   // ステータスタブ
-  const pendingCount = allTodos.filter(t => filterCourse==='all' || t.courseId===filterCourse).filter(t => !isDone(t)).length;
-  const doneCount = allTodos.filter(t => filterCourse==='all' || t.courseId===filterCourse).filter(t => isDone(t)).length;
+  const base = allTodos.filter(t => filterCourse==='all' || t.courseId===filterCourse);
+  const pendingCount = base.filter(t => !isDone(t) && t.due > new Date()).length;
+  const overdueCount = base.filter(t => !isDone(t) && t.due <= new Date()).length;
+  const doneCount = base.filter(t => isDone(t)).length;
   const statusTabs = `<div class="filter-tabs">
     <div class="tab ${filterStatus==='pending'?'active':''}" onclick="setFilterStatus('pending')">未完了 (${pendingCount})</div>
+    <div class="tab ${filterStatus==='overdue'?'active':''}" onclick="setFilterStatus('overdue')">期限切れ (${overdueCount})</div>
     <div class="tab ${filterStatus==='done'?'active':''}" onclick="setFilterStatus('done')">完了済み (${doneCount})</div>
     <div class="tab ${filterStatus==='all'?'active':''}" onclick="setFilterStatus('all')">すべて</div>
   </div>`;
@@ -342,8 +463,11 @@ function updateApp() {
             <div class="badges">
               ${done ? `<span class="due-badge due-gray">${fmtDate(t.due)}</span>` : `<span class="due-badge ${dueInfo.cls}">${dueInfo.label}</span><span class="due-badge due-gray">${fmtDate(t.due)}</span>`}
               ${isSubmitted ? `<span class="submitted-badge">提出済み</span>` : ''}
-              <a class="open-link" href="${t.link}" target="_blank">Classroomで開く →</a>
+              ${t.isCustom ? `<span class="custom-badge">自分のTodo</span>` : ''}
+              ${t.link ? `<a class="open-link" href="${t.link}" target="_blank">Classroomで開く →</a>` : ''}
+              ${t.isCustom ? `<span class="open-link" style="cursor:pointer;color:var(--red);" onclick="event.stopPropagation();deleteCustomTodo('${t.id}')">削除</span>` : ''}
             </div>
+            ${t.memo ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;">${t.memo}</div>` : ''}
           </div>
         </div>`;
     }
@@ -367,6 +491,7 @@ function setFilterStatus(v) { filterStatus = v; updateApp(); }
 async function reload() {
   renderLoading('更新中...');
   await loadCourses();
+  customTodos = loadCustomTodos();
   await loadAllTodos();
   renderApp();
   showToast('更新しました');
@@ -374,6 +499,8 @@ async function reload() {
 
 function logout() {
   accessToken = null; courses = []; allTodos = []; manualDoneIds = new Set(); localStorage.removeItem('manualDoneIds');
+  document.getElementById('add-btn').style.display = 'none';
+  document.getElementById('add-btn').style.display = 'flex';
   document.getElementById('header-right').innerHTML = `<button class="btn btn-primary" onclick="handleLogin()">Googleでログイン</button>`;
   document.getElementById('app').innerHTML = `<div id="login-screen">
     <div class="login-icon">📚</div>
